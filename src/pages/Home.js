@@ -3,93 +3,199 @@ import { Link } from 'react-router-dom';
 import HomeImg from '../assests/pothole.jpg';
 
 const Home = () => {
-  const [locations, setLocations] = useState([]);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [pothole, setPothole] = useState(false);
-  const [recordedChunks, setRecordedChunks] = useState([]);
+ const [isRecording, setIsRecording] = useState(false);
+  const [pothole, setPothole] = useState("No Pothole Ahead");
   const videoRef = useRef(null);
-  const sendIntervalRef = useRef(null);
-
+  const streamRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const videoQueue = useRef([]); // Queue for video chunks
+  const locationQueue = useRef([]); // Queue for location data
+  const temp=useRef(false);
+  // Track location while recording
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition((position) => {
-        const { latitude, longitude } = position.coords;
-        setLocations((prev) => [...prev, { latitude, longitude }]);
-      });
-    } else {
-      console.log('location error');
+    let locationInterval;
+    if (isRecording) {
+      locationInterval = setInterval(() => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            // console.log(latitude,longitude);
+            locationQueue.current.push({ latitude, longitude });
+          },
+          (error) => console.error("Error fetching location:", error),
+          { enableHighAccuracy: true }
+        );
+      }, 1000); // Fetch location every second
     }
-  }, []);
+    return () => clearInterval(locationInterval);
+  }, [isRecording]);
 
   const handleStartRecording = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-    videoRef.current.srcObject = stream;
-
-    const recorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm; codecs=vp9',
-    });
-
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        setRecordedChunks((prev) => [...prev, event.data]);
-      }
-    };
-
-    recorder.start(); // Start recording
-
-    setMediaRecorder(recorder);
-
-    sendIntervalRef.current = setInterval(() => {
-      if (recordedChunks.length > 0 && locations.length > 0) {
-        handleSendData();
-      } else {
-        console.log('error in sending data', recordedChunks.length);
-      }
-    }, 1000); // Send data every 1 second
+    try {
+      // Request camera stream
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+  
+      // Store the stream for later use
+      streamRef.current = stream;
+      videoRef.current.srcObject = stream;
+  
+      // Initialize MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "video/webm; codecs=vp8",
+      });
+  
+      
+  
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          videoQueue.current.push(event.data); // Store video chunks
+          processQueue(); // Process chunks
+        }
+      };
+  
+      // Start recording and create a chunk every 5 seconds
+      mediaRecorder.start();
+  
+      mediaRecorder.onstop = () => {
+        // Stop and restart the recorder after processing the chunk
+        console.log('Recording stopped');
+        if (mediaRecorder.state === 'inactive' && temp.current===true) {
+          // Restart the recorder after a short delay to ensure proper chunking
+          mediaRecorder.start();
+        }
+      };
+  
+      // Restart recording every 5 seconds
+      setInterval(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.requestData(); // Request chunk for the current recording
+          mediaRecorder.stop(); // Stop recording for the current chunk
+        }
+      }, 5000);
+  
+      mediaRecorderRef.current = mediaRecorder;
+      setIsRecording(true);
+      temp.current=true;
+    } catch (error) {
+      console.error("Error starting recording:", error);
+    }
   };
 
   const handleStopRecording = () => {
-    if (mediaRecorder) {
-      mediaRecorder.stop();
-      videoRef.current.srcObject.getTracks().forEach((track) => track.stop());
+    temp.current=false;
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      streamRef.current.getTracks().forEach((track) => track.stop());
     }
-    clearInterval(sendIntervalRef.current);
+    setIsRecording(false);
+    
+    
   };
 
-  const handleSendData = async () => {
-    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+  const processQueue = async () => {
+    // Pair each video chunk with location data
+    while (videoQueue.current.length > 0 && locationQueue.current.length > 0) {
+     
+     
+      const videoChunk = videoQueue.current.shift(); // Get video chunk
+      const locations = locationQueue.current.splice(0); // Get all location data
+      
+      console.log("Processed video chunk:", videoChunk);
+
+      // if (videoChunk) {
+      //   const blob = new Blob([videoChunk], { type: "video/webm" });
+      //   const blobUrl = URL.createObjectURL(blob);
+
+      //   console.log("Preview video:", blobUrl);
+
+      //   // Automatically download the chunk for testing
+      //   const a = document.createElement("a");
+      //   a.href = blobUrl;
+      //   a.download = `video_chunk_${Date.now()}.webm`;
+      //   a.click();
+      // }
+
+
+      if (locations.length > 0) {
+        const medianLat = median(locations.map((loc) => loc.latitude));
+        const medianLong = median(locations.map((loc) => loc.longitude));
+        // console.log(medianLat,medianLong);
+        await sendVideoChunk(videoChunk, medianLat, medianLong); // Send to server
+        checkPotholeInStoredLocations(medianLat,medianLong)
+      } else {
+        console.warn("No location data for this chunk.");
+      }
+    }
+  };
+
+  const checkPotholeInStoredLocations = async (medianLat,medianLong) => {
+   
+    try {
+        const response = await fetch('https://potholebackend.onrender.com/api/distance/live', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                latitude: medianLat,
+                longitude: medianLong,
+            }),
+        });
+        
+        const data = await response.json();
+        setPothole(data.message);  // Update the UI based on response
+       
+        console.log('Pothole check result:', data);
+    } catch (error) {
+        console.error('Error checking stored locations:', error);
+    }
+
+  };
+  const sendVideoChunk = async (chunk, latitude, longitude) => {
+    const blob = new Blob([chunk], { type: "video/webm" });
     const formData = new FormData();
-    formData.append('video', blob);
+    formData.append("video", blob, `chunk_${Date.now()}.webm`);
+    formData.append("latitude", latitude || 0);
+    formData.append("longitude", longitude || 0);
 
-    const medianLat = median(locations.map((loc) => loc.latitude));
-    const medianLong = median(locations.map((loc) => loc.longitude));
+    try {
+      const response = await fetch("http://127.0.0.1:5000/upload_blob", {
+        method: "POST",
+        body: formData,
+        mode: "cors",
+      });
 
-    formData.append('latitude', medianLat);
-    formData.append('longitude', medianLong);
-    console.log(formData);
+      const result = await response.json();
+      console.log("Server response:", result);
 
-    setRecordedChunks([]);
-    setLocations([]);
+    } catch (error) {
+      console.error("Error sending video chunk:", error);
+    }
   };
 
   const median = (values) => {
     if (values.length === 0) return null;
     values.sort((a, b) => a - b);
-    const half = Math.floor(values.length / 2);
-    if (values.length % 2) {
-      return values[half];
-    }
-    return (values[half - 1] + values[half]) / 2.0;
+    const mid = Math.floor(values.length / 2);
+    return values.length % 2 !== 0
+      ? values[mid]
+      : (values[mid - 1] + values[mid]) / 2.0;
   };
+
+
+
 
   return (
     <div className="font-serif">
       <div className="  flex flex-col items-center justify-center font-semibold">
-        <div className={`text-white bg-red-600 rounded-xl text-lg px-6 py-3 mb-4 ${pothole ? '' : 'hidden'}`}>
+        <div className={`text-white bg-red-600 rounded-xl text-lg px-6 py-3 mb-4 ${pothole!=="No Pothole Ahead" ? '' : 'hidden'}`}>
           <div className="mx-auto">⚠ Alert! ⚠</div>
           <div>Pothole Detected in 100m</div>
         </div>
-        <div className={`text-white bg-green-400 rounded-xl text-lg px-6 py-3 mb-4 ${pothole ? 'hidden' : ''}`}>
+        <div className={`text-white bg-green-400 rounded-xl text-lg px-6 py-3 mb-4 ${pothole!=="No Pothole Ahead" ? 'hidden' : ''}`}>
           <div className="mx-auto">Safe</div>
           <div>No Pothole Detected</div>
         </div>
