@@ -19,7 +19,7 @@ const Home = () => {
         navigator.geolocation.getCurrentPosition(
           (position) => {
             const { latitude, longitude } = position.coords;
-            // console.log(latitude,longitude);
+            console.log(latitude,longitude);
             locationQueue.current.push({ latitude, longitude });
           },
           (error) => console.error("Error fetching location:", error),
@@ -32,11 +32,27 @@ const Home = () => {
 
   const handleStartRecording = async () => {
     try {
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === "videoinput");
+
+    let rearCameraId = videoDevices.find((device) =>
+      device.label.toLowerCase().includes("back") || device.label.toLowerCase().includes("rear")
+    )?.deviceId;
+
+    const constraints = {
+      video: rearCameraId
+        ? { deviceId: { exact: rearCameraId } } // Use rear camera if found
+        : { facingMode: "environment" },       // Fallback to facingMode
+      audio: false,
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
       // Request camera stream
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false,
-      });
+      // const stream = await navigator.mediaDevices.getUserMedia({
+      //   video: true,
+      //   audio: false,
+      // });
   
       // Store the stream for later use
       streamRef.current = stream;
@@ -84,6 +100,8 @@ const Home = () => {
     }
   };
 
+
+  
   const handleStopRecording = () => {
     temp.current=false;
     if (mediaRecorderRef.current) {
@@ -134,7 +152,7 @@ const Home = () => {
   const checkPotholeInStoredLocations = async (medianLat,medianLong) => {
    
     try {
-        const response = await fetch('https://potholebackend.onrender.com/api/distance/live', {
+        const response = await fetch('http://localhost:8080/api/distance/live', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -142,6 +160,7 @@ const Home = () => {
             body: JSON.stringify({
                 latitude: medianLat,
                 longitude: medianLong,
+                val: 4,
             }),
         });
         
@@ -162,7 +181,7 @@ const Home = () => {
     formData.append("longitude", longitude || 0);
 
     try {
-      const response = await fetch("https://b301-2401-4900-5970-1640-74a3-2ce1-c7c0-8af6.ngrok-free.app/upload_blob", {
+      const response = await fetch("http://127.0.0.1:5000/upload_blob", {
         method: "POST",
         body: formData,
         mode: "cors",
@@ -190,6 +209,8 @@ const Home = () => {
 
   return (
     <div className="font-serif">
+
+    {/* recorder */}
       <div className="  flex flex-col items-center justify-center font-semibold">
         <div className={`text-white bg-red-600 rounded-xl text-lg px-6 py-3 mb-4 ${pothole!=="No Pothole Ahead" ? '' : 'hidden'}`}>
           <div className="mx-auto">⚠ Alert! ⚠</div>
@@ -201,7 +222,7 @@ const Home = () => {
         </div>
         <div className="w-full max-w-2xl py-8">
           <div className="relative">
-            <video ref={videoRef} autoPlay controls className="w-full h-auto" />
+            <video ref={videoRef} autoPlay controls playsInline className="w-full h-auto" />
             <button
               onClick={handleStartRecording}
               className="absolute top-0 left-0 m-4 bg-green-500 text-white px-4 py-2 rounded-lg"
@@ -217,6 +238,8 @@ const Home = () => {
           </div>
         </div>
       </div>
+
+      {/* Home Page */}
       <div className="hidden flex flex-col gap-y-10">
         <div className="mx-auto flex flex-col items-center text-center gap-y-4 px-4">
           <div className="text-4xl font-semibold">Pothole Patrol</div>
