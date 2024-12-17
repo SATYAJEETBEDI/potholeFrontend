@@ -152,7 +152,7 @@ const Home = () => {
   const checkPotholeInStoredLocations = async (medianLat,medianLong) => {
    
     try {
-        const response = await fetch('http://localhost:8080/api/distance/live', {
+        const response = await fetch('https://potholebackend.onrender.com/api/distance/live', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -181,7 +181,7 @@ const Home = () => {
     formData.append("longitude", longitude || 0);
 
     try {
-      const response = await fetch("http://127.0.0.1:5000/upload_blob", {
+      const response = await fetch("https://aacc-2401-4900-8130-4be-bc66-24ce-74ac-e8f7.ngrok-free.app/upload_blob", {
         method: "POST",
         body: formData,
         mode: "cors",
