@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link,useNavigate } from 'react-router-dom';
 import HomeImg from '../assests/pothole.jpg';
 
 const Home = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Tracks authentication state
  const [isRecording, setIsRecording] = useState(false);
   const [pothole, setPothole] = useState("No Pothole Ahead");
   const videoRef = useRef(null);
@@ -11,6 +12,22 @@ const Home = () => {
   const videoQueue = useRef([]); // Queue for video chunks
   const locationQueue = useRef([]); // Queue for location data
   const temp=useRef(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is authenticated (for example, from localStorage or state)
+    const authStatus = localStorage.getItem('isLoggedIn') === 'true';
+    setIsLoggedIn(authStatus);
+  }, []);
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    localStorage.removeItem('isLoggedIn'); // Clear auth status
+    navigate('/login'); // Redirect to login page
+  };
+
+
+
   // Track location while recording
   useEffect(() => {
     let locationInterval;
@@ -152,7 +169,7 @@ const Home = () => {
   const checkPotholeInStoredLocations = async (medianLat,medianLong) => {
    
     try {
-        const response = await fetch('https://potholebackend.onrender.com/api/distance/live', {
+        const response = await fetch('http://localhost:8080/api/distance/live', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -181,7 +198,7 @@ const Home = () => {
     formData.append("longitude", longitude || 0);
 
     try {
-      const response = await fetch("https://aacc-2401-4900-8130-4be-bc66-24ce-74ac-e8f7.ngrok-free.app/upload_blob", {
+      const response = await fetch("http://127.0.0.1:5000/upload_blob", {
         method: "POST",
         body: formData,
         mode: "cors",
@@ -209,9 +226,8 @@ const Home = () => {
 
   return (
     <div className="font-serif">
-
-    {/* recorder */}
-      <div className="  flex flex-col items-center justify-center font-semibold">
+  {isLoggedIn?
+  (<div className="  flex flex-col items-center justify-center font-semibold">
         <div className={`text-white bg-red-600 rounded-xl text-lg px-6 py-3 mb-4 ${pothole!=="No Pothole Ahead" ? '' : 'hidden'}`}>
           <div className="mx-auto">⚠ Alert! ⚠</div>
           <div>Pothole Detected in 100m</div>
@@ -237,10 +253,7 @@ const Home = () => {
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Home Page */}
-      <div className="hidden flex flex-col gap-y-10">
+      </div>):(<div className=" flex flex-col gap-y-10">
         <div className="mx-auto flex flex-col items-center text-center gap-y-4 px-4">
           <div className="text-4xl font-semibold">Pothole Patrol</div>
           <div className="text-gray-400">Know before you go.</div>
@@ -269,7 +282,12 @@ const Home = () => {
           </div>
           
         </div>
-      </div>
+      </div>)
+  }
+    
+
+      
+
     </div>
   );
 };

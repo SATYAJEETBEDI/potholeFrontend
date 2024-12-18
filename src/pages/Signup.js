@@ -100,9 +100,9 @@ export const Signup = () => {
     setPasswordStrength(strength);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     const isFormValid =
       formData.username &&
       formData.email &&
@@ -112,24 +112,50 @@ export const Signup = () => {
       !errors.email &&
       !errors.password &&
       !errors.confirmPassword;
-
-    if (isFormValid) {
-      setAlert({ visible: true, message: 'Sign Up Successful!', type: 'success' });
-
-      setFormData({
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-      });
-
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000); 
-    } else {
+  
+    if (!isFormValid) {
       setAlert({ visible: true, message: 'Please fill out all fields correctly.', type: 'error' });
+      return;
+    }
+  
+    try {
+      const response = await fetch('https://capstonelogin.onrender.com/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+  
+      const data = await response.text();
+  
+      if (response.ok && data === 'done') {
+        // Handle success
+        setAlert({ visible: true, message: 'Sign Up Successful!', type: 'success' });
+        setFormData({
+          username: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+        });
+  
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000); // Redirect to login page
+      } else {
+        // Handle errors returned from the server
+        setAlert({ visible: true, message: data.message || 'Sign Up Failed.', type: 'error' });
+      }
+    } catch (error) {
+      console.error('Error during signup:', error);
+      setAlert({ visible: true, message: 'Something went wrong. Please try again later.', type: 'error' });
     }
   };
+  
 
   const handleCloseAlert = () => {
     setAlert({ visible: false, message: '', type: '' });

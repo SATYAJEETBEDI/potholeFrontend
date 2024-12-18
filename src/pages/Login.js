@@ -47,24 +47,56 @@ const Login = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+  
     if (!errors.email && !errors.password && formData.email && formData.password) {
-      setAlert({ visible: true, message: 'Login Successful!', type: 'success' });
-
-      setFormData({
-        email: '',
-        password: '',
-      });
-
-      setTimeout(() => {
-        navigate('/');
-      }, 2000); 
+      try {
+        const response = await fetch('https://capstonelogin.onrender.com/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        });
+  
+        const data = await response.text();
+  
+        if (response.ok && data === 'authenticated' ) {
+          // Handle successful login
+          setAlert({ visible: true, message: 'Login Successful!', type: 'success' });
+          setFormData({ email: '', password: '' });
+  
+          localStorage.setItem('isLoggedIn', 'true');
+          // Redirect or save token if needed
+          setTimeout(() => {
+            navigate('/');
+          }, 2000);
+        } else {
+          // Handle server error response
+          setAlert({
+            visible: true,
+            message: data.message || 'Invalid email or password. Please try again.',
+            type: 'error',
+          });
+        }
+      } catch (error) {
+        console.error('Error during login:', error);
+        setAlert({
+          visible: true,
+          message: 'Something went wrong. Please try again later.',
+          type: 'error',
+        });
+      }
     } else {
       setAlert({ visible: true, message: 'Please fill out all fields correctly.', type: 'error' });
     }
   };
-
+  
+  
   const handleCloseAlert = () => {
     setAlert({ visible: false, message: '', type: '' });
   };
