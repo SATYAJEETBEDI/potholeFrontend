@@ -102,7 +102,7 @@ const Home = () => {
           mediaRecorder.requestData(); // Request chunk for the current recording
           mediaRecorder.stop(); // Stop recording for the current chunk
         }
-      }, 2000);
+      }, 5000);
   
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
@@ -198,7 +198,7 @@ const Home = () => {
     formData.append("longitude", longitude || 0);
 
     try {
-      const response = await fetch("https://85b2-2401-4900-5990-16cf-5468-3864-b527-4acc.ngrok-free.app/upload_blob", {
+      const response = await fetch("https://6e61-2401-4900-8140-586-dd10-9e7f-abc5-fb53.ngrok-free.app/upload_blob", {
         method: "POST",
         body: formData,
         mode: "cors",
