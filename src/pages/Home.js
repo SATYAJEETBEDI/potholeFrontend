@@ -102,7 +102,7 @@ const Home = () => {
           mediaRecorder.requestData(); // Request chunk for the current recording
           mediaRecorder.stop(); // Stop recording for the current chunk
         }
-      }, 5000);
+      }, 2000);
   
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
