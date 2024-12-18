@@ -12,7 +12,7 @@ const Home = () => {
   const videoQueue = useRef([]); // Queue for video chunks
   const locationQueue = useRef([]); // Queue for location data
   const temp=useRef(false);
-  const navigate = useNavigate();
+  const [distance,setDistance]=useState(0);
 
   useEffect(() => {
     // Check if user is authenticated (for example, from localStorage or state)
@@ -20,11 +20,6 @@ const Home = () => {
     setIsLoggedIn(authStatus);
   }, []);
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    localStorage.removeItem('isLoggedIn'); // Clear auth status
-    navigate('/login'); // Redirect to login page
-  };
 
 
 
@@ -183,7 +178,12 @@ const Home = () => {
         
         const data = await response.json();
         setPothole(data.message);  // Update the UI based on response
-       
+        if(pothole==="Pothole ahead"){
+          setDistance(data.distance);
+        }
+        else{
+          setDistance(0);
+        }
         console.log('Pothole check result:', data);
     } catch (error) {
         console.error('Error checking stored locations:', error);
@@ -198,7 +198,7 @@ const Home = () => {
     formData.append("longitude", longitude || 0);
 
     try {
-      const response = await fetch("https://9ebd-2401-4900-5c70-5fb-ac89-a675-f68b-f66.ngrok-free.app/upload_blob", {
+      const response = await fetch("https://005c-2401-4900-5c70-5fb-ac89-a675-f68b-f66.ngrok-free.app/upload_blob", {
         method: "POST",
         body: formData,
         mode: "cors",
@@ -230,7 +230,7 @@ const Home = () => {
   (<div className="  flex flex-col items-center justify-center font-semibold">
         <div className={`text-white bg-red-600 rounded-xl text-lg px-6 py-3 mb-4 ${pothole!=="No Pothole Ahead" ? '' : 'hidden'}`}>
           <div className="mx-auto">⚠ Alert! ⚠</div>
-          <div>Pothole Detected in 100m</div>
+          <div>Pothole Detected in {distance} m</div>
         </div>
         <div className={`text-white bg-green-400 rounded-xl text-lg px-6 py-3 mb-4 ${pothole!=="No Pothole Ahead" ? 'hidden' : ''}`}>
           <div className="mx-auto">Safe</div>
