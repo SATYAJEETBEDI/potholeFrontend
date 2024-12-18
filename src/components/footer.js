@@ -1,6 +1,8 @@
 import React from 'react';
 
 export const Footer = () => {
+
+  
   return (
     <footer className="w-full p-4 bg-white text-gray-600" style={{marginTop: 100}}>
       <hr className="border-gray-200 mb-4" />
@@ -24,24 +26,7 @@ export const Footer = () => {
             </div>
           </div>
           <div className="flex space-x-8">
-            <div className="flex flex-col space-y-2">
-              <div className="text-gray-700 font-semibold">Topic</div>
-              <a href="#" className="text-gray-700">Page</a>
-              <a href="#" className="text-gray-700">Page</a>
-              <a href="#" className="text-gray-700">Page</a>
-            </div>
-            <div className="flex flex-col space-y-2">
-              <div className="text-gray-700 font-semibold">Topic</div>
-              <a href="#" className="text-gray-700">Page</a>
-              <a href="#" className="text-gray-700">Page</a>
-              <a href="#" className="text-gray-700">Page</a>
-            </div>
-            <div className="flex flex-col space-y-2">
-              <div className="text-gray-700 font-semibold">Topic</div>
-              <a href="#" className="text-gray-700">Page</a>
-              <a href="#" className="text-gray-700">Page</a>
-              <a href="#" className="text-gray-700">Page</a>
-            </div>
+            Made with ❤️ By CPG: 36
           </div>
         </div>
       </div>
