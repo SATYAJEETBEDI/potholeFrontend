@@ -198,7 +198,7 @@ const Home = () => {
     formData.append("longitude", longitude || 0);
 
     try {
-      const response = await fetch("https://6e61-2401-4900-8140-586-dd10-9e7f-abc5-fb53.ngrok-free.app/upload_blob", {
+      const response = await fetch("https://e985-112-196-126-3.ngrok-free.app/upload_blob", {
         method: "POST",
         body: formData,
         mode: "cors",
